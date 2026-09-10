@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0b3d3a">
   <meta name="description" content="手機優先的聯單、收料單判定與地磅單預覽工具">
   <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="stylesheet" href="./styles.css?v=4">
+  <link rel="stylesheet" href="./styles.css?v=5">
   <title>司機收料單判定工具</title>
 </head>
 <body>
@@ -122,7 +122,12 @@
     <section class="panel decision-panel" id="decisionPanel">
       <div class="section-title"><div><p class="eyebrow">固定規則判定</p><h2>收料單應如何開立</h2></div></div>
       <label class="unknown-switch no-manifest"><input id="noManifest" type="checkbox"><span><b>本次作業沒有聯單</b><small>必須由司機明確選擇</small></span></label>
-      <label class="unknown-switch"><input id="weightUnknown" type="checkbox"><span><b>現場無法確認是否等重</b><small>例如客戶端無過大磅；照片模糊不適用</small></span></label>
+      <fieldset class="weight-relation" id="weightRelationGroup">
+        <legend>有聯單時，聯單申報重量是否可確認與實際收貨重量相等？</legend>
+        <label><input id="weightEqual" type="radio" name="weightRelation" value="equal"><span><b>重量相等</b><small>聯單申報重量＝實際收貨重量</small></span></label>
+        <label><input id="weightDifferent" type="radio" name="weightRelation" value="different"><span><b>重量不相等</b><small>聯單申報重量≠實際收貨重量</small></span></label>
+        <label><input id="weightUnknown" type="radio" name="weightRelation" value="unknown"><span><b>目前無法確認</b><small>例如客戶端無過大磅</small></span></label>
+      </fieldset>
       <div class="decision-alert" id="decisionAlert">
         <p id="decisionName">請先確認兩張單據</p>
         <h3 id="decisionHeadline">尚未完成判定</h3>
@@ -164,6 +169,6 @@
   </main>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script src="./app.js?v=12"></script>
+<script src="./app.js?v=13"></script>
 </body>
 </html>
