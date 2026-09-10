@@ -2,7 +2,7 @@ const $ = (id) => document.getElementById(id);
 const OCR_WORKER_URL = 'https://weighing-ticket-ocr.yilida-material.workers.dev';
 const state = { manifestConfirmed:false, receiptConfirmed:false };
 const manifestIds = ['manifestNo','manifestDate','vehicleNo','manifestMaterial','declaredWeight','manifestNote'];
-const receiptIds = ['customerName','customerNo','receiptNo','receiptManifestNo','receiptTransportDate','item1No','item1Name','item1Weight','item2No','item2Name','item2Weight'];
+const receiptIds = ['customerName','customerNo','receiptNo','receiptTransportDate','item1No','item1Name','item1Weight','item2No','item2Name','item2Weight'];
 
 function setValues(values){ Object.entries(values).forEach(([id,value])=>{ if($(id)) $(id).value=value; }); updateCalculations(); }
 function number(id){ const value=parseFloat($(id).value); return Number.isFinite(value)?value:null; }
@@ -37,7 +37,7 @@ function loadManifest(){
   $('manifestState').textContent='待人工確認'; $('manifestState').className='state waiting'; toast('已載入範例聯單資料');
 }
 function loadReceipt(){
-  setValues({customerName:'範例科技股份有限公司',customerNo:'DEMO-001',receiptNo:'R-DEMO-001',receiptManifestNo:'M-DEMO-001',receiptTransportDate:'2026-09-08',item1No:'MAT-001',item1Name:'範例物料甲',item1Weight:'7',item2No:'MAT-002',item2Name:'範例物料乙',item2Weight:'4'});
+  setValues({customerName:'範例科技股份有限公司',customerNo:'DEMO-001',receiptNo:'R-DEMO-001',receiptTransportDate:'2026-09-08',item1No:'MAT-001',item1Name:'範例物料甲',item1Weight:'7',item2No:'MAT-002',item2Name:'範例物料乙',item2Weight:'4'});
   $('receiptState').textContent='待人工確認'; $('receiptState').className='state waiting'; toast('已載入範例收料單資料');
 }
 function validate(ids){ const missing=ids.filter(id=>$(id).required&&!$(id).value.trim()); if(missing.length){ $(missing[0]).focus(); toast('請先完成紅框必填欄位'); return false; } return true; }
@@ -56,7 +56,8 @@ function evaluate(){
   if(noManifest&&state.receiptConfirmed){
     ['compareNo','compareDate','compareWeight'].forEach(id=>{ $(id).textContent='— 不適用'; $(id).className=''; });
   } else if(ready){
-    compare('compareNo',$('manifestNo').value.trim()===$('receiptManifestNo').value.trim());
+    const manifestNo=$('manifestNo').value.trim();
+    $('compareNo').textContent=manifestNo?'✓ 聯單已辨識':'⚠ 無法辨識'; $('compareNo').className=manifestNo?'match':'';
     compare('compareDate',$('manifestDate').value===$('receiptTransportDate').value);
     compare('compareWeight',declaredWeightKg()===receiptTotal());
   } else ['compareNo','compareDate','compareWeight'].forEach(id=>{ $(id).textContent='⚠ 無法辨識'; $(id).className=''; });
@@ -115,14 +116,13 @@ function parseReceipt(text){
   const customer=afterLabel(lines,['客戶名稱','客戶']);
   const customerNo=afterLabel(lines,['客戶編號','客戶代號']);
   const receiptNo=afterLabel(lines,['收料單號','收料單編號']);
-  const manifestNo=afterLabel(lines,['聯單編號','聯單號']);
   const date=afterLabel(lines,['載運日期','單據日期','日期']);
   const items=[];
   for(const line of lines){
     const m=line.match(/(?:^|\s)([A-Z0-9]+(?:-[A-Z0-9]+){1,})\s+(.+?)\s+(\d+(?:[,.]\d+)?)\s*(?:kg|公斤)?\s*$/i);
     if(m&&!/(收料單|聯單)/.test(line)) items.push({no:m[1],name:m[2].trim(),weight:m[3].replace(',','')});
   }
-  return {customerName:customer,customerNo:firstCode(customerNo),receiptNo:firstCode(receiptNo),receiptManifestNo:firstCode(manifestNo),receiptTransportDate:firstDate(date||all),item1No:items[0]?.no,item1Name:items[0]?.name,item1Weight:items[0]?.weight,item2No:items[1]?.no,item2Name:items[1]?.name,item2Weight:items[1]?.weight};
+  return {customerName:customer,customerNo:firstCode(customerNo),receiptNo:firstCode(receiptNo),receiptTransportDate:firstDate(date||all),item1No:items[0]?.no,item1Name:items[0]?.name,item1Weight:items[0]?.weight,item2No:items[1]?.no,item2Name:items[1]?.name,item2Weight:items[1]?.weight};
 }
 async function fileSelected(input,status,group){
   const file=input.files?.[0];
@@ -139,7 +139,7 @@ async function fileSelected(input,status,group){
       manifestNo:data.manifest_no,manifestDate:data.date,vehicleNo:data.vehicle_no,manifestMaterial:data.material_name,
       declaredWeight:Number.isFinite(Number(data.declared_weight_kg))?Number(data.declared_weight_kg)/1000:null,manifestNote:data.note
     }:{
-      customerName:data.customer_name,customerNo:data.customer_no,receiptNo:data.receipt_no,receiptManifestNo:data.manifest_no,receiptTransportDate:data.transport_date,
+      customerName:data.customer_name,customerNo:data.customer_no,receiptNo:data.receipt_no,receiptTransportDate:data.transport_date,
       item1No:weightedItems[0]?.material_no,item1Name:weightedItems[0]?.material_name,item1Weight:weightedItems[0]?.net_weight_kg,
       item2No:weightedItems[1]?.material_no,item2Name:weightedItems[1]?.material_name,item2Weight:weightedItems[1]?.net_weight_kg
     };
