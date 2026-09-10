@@ -1,4 +1,5 @@
 const $ = (id) => document.getElementById(id);
+const OCR_WORKER_URL = 'https://weighing-ticket-ocr.yilida-material.workers.dev';
 const state = { manifestConfirmed:false, receiptConfirmed:false };
 const manifestIds = ['manifestNo','manifestDate','vehicleNo','manifestMaterial','declaredWeight','manifestNote'];
 const receiptIds = ['customerName','customerNo','receiptNo','receiptManifestNo','receiptTransportDate','item1No','item1Name','item1Weight','item2No','item2Name','item2Weight'];
@@ -126,15 +127,30 @@ function parseReceipt(text){
 async function fileSelected(input,status,group){
   const file=input.files?.[0];
   if(!file){ $(status).textContent='尚未選擇照片'; return; }
-  $(status).textContent='準備辨識照片…';
-  if(!window.Tesseract){ $(status).textContent='辨識元件載入失敗，請檢查網路後重試'; toast('OCR 元件載入失敗'); return; }
+  $(status).textContent='Gemini 正在辨識照片…';
   try{
-    const result=await Tesseract.recognize(file,'chi_tra+eng',{logger:m=>{ if(m.status==='recognizing text') $(status).textContent=`辨識中 ${Math.round((m.progress||0)*100)}%`; }});
-    const text=cleanOcrText(result.data.text||'');
-    const count=applyRecognized(group==='manifest'?parseManifest(text):parseReceipt(text),group);
+    const imageBase64=await new Promise((resolve,reject)=>{ const reader=new FileReader(); reader.onload=()=>resolve(String(reader.result).split(',')[1]); reader.onerror=reject; reader.readAsDataURL(file); });
+    const response=await fetch(OCR_WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({document_type:group,mime_type:file.type||'image/jpeg',image_base64:imageBase64})});
+    const payload=await response.json();
+    if(!response.ok) throw new Error(payload.error||'辨識服務錯誤');
+    const data=payload.data||{};
+    const weightedItems=(data.items||[]).filter(item=>item?.net_weight_kg!==null&&item?.net_weight_kg!==''&&Number.isFinite(Number(item.net_weight_kg)));
+    const values=group==='manifest'?{
+      manifestNo:data.manifest_no,manifestDate:data.date,vehicleNo:data.vehicle_no,manifestMaterial:data.material_name,
+      declaredWeight:Number.isFinite(Number(data.declared_weight_kg))?Number(data.declared_weight_kg)/1000:null,manifestNote:data.note
+    }:{
+      customerName:data.customer_name,customerNo:data.customer_no,receiptNo:data.receipt_no,receiptManifestNo:data.manifest_no,receiptTransportDate:data.transport_date,
+      item1No:weightedItems[0]?.material_no,item1Name:weightedItems[0]?.material_name,item1Weight:weightedItems[0]?.net_weight_kg,
+      item2No:weightedItems[1]?.material_no,item2Name:weightedItems[1]?.material_name,item2Weight:weightedItems[1]?.net_weight_kg
+    };
+    if(group==='receipt'){
+      if(typeof data.check_1==='boolean') $('check1').checked=data.check_1;
+      if(typeof data.check_2==='boolean') $('check2').checked=data.check_2;
+    }
+    const count=applyRecognized(values,group);
     $(status).textContent=count?`辨識完成：已填入 ${count} 欄`:'無法可靠辨識，請人工輸入';
     toast(count?'辨識完成，請逐欄確認':'未辨識到可靠欄位');
-  }catch(error){ console.error(error); $(status).textContent='辨識失敗，請重拍或人工輸入'; toast('照片辨識失敗'); }
+  }catch(error){ console.error(error); $(status).textContent=error.message||'辨識失敗，請重拍或人工輸入'; toast('Gemini 照片辨識失敗'); }
   finally{ input.value=''; }
 }
 function generateSlip(){
