@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0b3d3a">
   <meta name="description" content="手機優先的聯單、收料單判定與地磅單預覽工具">
   <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="stylesheet" href="./styles.css?v=3">
+  <link rel="stylesheet" href="./styles.css?v=4">
   <title>司機收料單判定工具</title>
 </head>
 <body>
@@ -36,10 +36,16 @@
           <div><p>入口一</p><h2>拍攝聯單</h2></div>
         </div>
         <p class="muted">擷取聯單號、日期、車號、物料代碼與申報重量。</p>
-        <label class="camera-button">
-          <span>開啟相機／相簿</span>
-          <input id="manifestPhoto" type="file" accept="image/*" capture="environment">
-        </label>
+        <div class="capture-actions">
+          <label class="camera-button">
+            <span>📷 當下拍照</span>
+            <input id="manifestCamera" type="file" accept="image/*" capture="environment">
+          </label>
+          <label class="gallery-button">
+            <span>▣ 從相簿選擇</span>
+            <input id="manifestGallery" type="file" accept="image/*">
+          </label>
+        </div>
         <button class="secondary-button" id="demoManifest" type="button">載入範例聯單資料</button>
         <p class="file-status" id="manifestFile">尚未選擇照片</p>
       </article>
@@ -50,10 +56,16 @@
           <div><p>入口二</p><h2>拍攝收料單</h2></div>
         </div>
         <p class="muted">擷取客戶、收料單號、多筆物料與實收重量。</p>
-        <label class="camera-button">
-          <span>開啟相機／相簿</span>
-          <input id="receiptPhoto" type="file" accept="image/*" capture="environment">
-        </label>
+        <div class="capture-actions">
+          <label class="camera-button">
+            <span>📷 當下拍照</span>
+            <input id="receiptCamera" type="file" accept="image/*" capture="environment">
+          </label>
+          <label class="gallery-button">
+            <span>▣ 從相簿選擇</span>
+            <input id="receiptGallery" type="file" accept="image/*">
+          </label>
+        </div>
         <button class="secondary-button" id="demoReceipt" type="button">載入範例收料單資料</button>
         <p class="file-status" id="receiptFile">尚未選擇照片</p>
       </article>
@@ -153,6 +165,6 @@
   </main>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="./app.js?v=7"></script>
+<script src="./app.js?v=8"></script>
 </body>
 </html>

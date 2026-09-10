@@ -95,7 +95,8 @@ function productionText(){
 }
 
 $('demoManifest').addEventListener('click',loadManifest); $('demoReceipt').addEventListener('click',loadReceipt);
-$('manifestPhoto').addEventListener('change',e=>fileSelected(e.target,'manifestFile')); $('receiptPhoto').addEventListener('change',e=>fileSelected(e.target,'receiptFile'));
+['manifestCamera','manifestGallery'].forEach(id=>$(id).addEventListener('change',e=>fileSelected(e.target,'manifestFile')));
+['receiptCamera','receiptGallery'].forEach(id=>$(id).addEventListener('change',e=>fileSelected(e.target,'receiptFile')));
 $('confirmManifest').addEventListener('click',()=>confirmGroup('manifest')); $('confirmReceipt').addEventListener('click',()=>confirmGroup('receipt'));
 $('weightUnknown').addEventListener('change',evaluate); $('noManifest').addEventListener('change',evaluate); $('generateSlip').addEventListener('click',generateSlip); $('closeSlip').addEventListener('click',()=>$('weighSlip').classList.remove('visible'));
 $('printSlip').addEventListener('click',()=>window.print());
