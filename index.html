@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0b3d3a">
   <meta name="description" content="手機優先的聯單、收料單判定與地磅單預覽工具">
   <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="stylesheet" href="./styles.css?v=5">
+  <link rel="stylesheet" href="./styles.css?v=6">
   <title>司機收料單判定工具</title>
 </head>
 <body>
@@ -136,7 +136,14 @@
       <div class="fixed-rule"><b>最高優先規則</b><span>實際收貨重量 ≠ 聯單申報重量 → 一律分2張收料單</span></div>
     </section>
 
-    <section class="panel scale-panel" id="scalePanel">
+    <section class="panel scale-prompt hidden" id="scalePrompt">
+      <div class="section-title"><div><p class="eyebrow">下一步</p><h2>是否需要進行磅單模擬測試？</h2></div></div>
+      <p class="muted">判定已完成，需要試算磅單時再繼續。</p>
+      <div class="scale-choice-actions"><button class="primary-button" id="startScaleTest" type="button">需要，進行磅單模擬</button><button class="secondary-button" id="skipScaleTest" type="button">暫不需要</button></div>
+      <p class="scale-choice-status" id="scaleChoiceStatus"></p>
+    </section>
+
+    <section class="panel scale-panel hidden" id="scalePanel">
       <div class="section-title"><div><p class="eyebrow">地磅單</p><h2>輸入過磅重量</h2></div><span class="unit-pill">單位 KG</span></div>
       <div class="scale-inputs">
         <label>總重<small>地磅第一次秤重</small><input id="grossWeight" type="number" min="0" step="0.001" inputmode="decimal" required placeholder="請輸入總重"></label>
@@ -169,6 +176,6 @@
   </main>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script src="./app.js?v=13"></script>
+<script src="./app.js?v=14"></script>
 </body>
 </html>

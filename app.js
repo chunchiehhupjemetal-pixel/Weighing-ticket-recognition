@@ -50,6 +50,8 @@ function confirmGroup(group){
   $(isManifest?'manifestDot':'receiptDot').classList.add('done'); toast('資料已確認'); refreshScaleCheck(); evaluate();
 }
 function compare(id,match){ const el=$(id); el.textContent=match?'✓ 一致':'⚠ 不一致'; el.className=match?'match':'mismatch'; }
+function hideScaleFlow(){ $('scalePrompt').classList.add('hidden'); $('scalePanel').classList.add('hidden'); $('scaleChoiceStatus').textContent=''; }
+function offerScaleFlow(){ $('scalePrompt').classList.remove('hidden'); }
 function evaluate(){
   const noManifest=$('noManifest').checked;
   const ready=state.receiptConfirmed&&(noManifest||state.manifestConfirmed);
@@ -63,13 +65,13 @@ function evaluate(){
   } else ['compareNo','compareDate','compareWeight'].forEach(id=>{ $(id).textContent='⚠ 無法辨識'; $(id).className=''; });
   const alert=$('decisionAlert'), relation=document.querySelector('input[name="weightRelation"]:checked')?.value;
   alert.className='decision-alert';
-  if(!ready){ $('decisionName').textContent='請先確認兩張單據'; $('decisionHeadline').textContent='尚未完成判定'; $('decisionInstructions').innerHTML=''; return; }
+  if(!ready){ hideScaleFlow(); $('decisionName').textContent='請先確認兩張單據'; $('decisionHeadline').textContent='尚未完成判定'; $('decisionInstructions').innerHTML=''; return; }
   const declared=declaredWeightKg(), actual=receiptTotal();
   $('resultDot').classList.add('done');
   if(noManifest){
     alert.classList.add('success'); $('decisionName').textContent='1張－勾1'; $('decisionHeadline').textContent='無聯單，開1張'; $('decisionInstructions').innerHTML=`<div class="instructions"><div class="instruction-block"><h4>收料單怎麼勾</h4><strong>第1張只勾「一」</strong><span>重量填實際收貨重量 ${actual??'待輸入'} kg</span></div><div class="instruction-block scale-guide"><h4>磅單重量怎麼登打</h4><strong>淨重以實際收貨重量 ${actual??'待輸入'} kg 為準</strong><span>輸入總重、空重及扣重，由系統自動計算淨重。</span></div></div>`;
   } else if(!relation){
-    $('decisionName').textContent='請選擇重量狀況'; $('decisionHeadline').textContent='重量相等／不相等／目前無法確認'; $('decisionInstructions').innerHTML=''; return;
+    hideScaleFlow(); $('decisionName').textContent='請選擇重量狀況'; $('decisionHeadline').textContent='重量相等／不相等／目前無法確認'; $('decisionInstructions').innerHTML=''; return;
   } else if(relation==='different'||(declared!=null&&actual!=null&&declared!==actual)){
     alert.classList.add('danger'); $('decisionName').textContent='2張－分12'; $('decisionHeadline').textContent=`${actual} kg ≠ ${declared} kg，必須分2張`;
     $('decisionInstructions').innerHTML=`<div class="instructions"><div class="instruction-block"><h4>收料單怎麼勾</h4><strong>第1張只勾「一」：${actual} kg</strong><strong>第2張只勾「二」：${declared} kg</strong><span>不得將不同重量寫在同一張收料單。</span></div><div class="instruction-block scale-guide"><h4>磅單重量怎麼登打</h4><strong>磅單淨重登打 ${actual} kg，以第1張實收重量為準</strong><span>第2張的 ${declared} kg 是聯單申報重量，不得覆蓋磅單實收淨重。</span></div></div>`;
@@ -77,7 +79,8 @@ function evaluate(){
     alert.classList.add('success'); $('decisionName').textContent='1張－待確認12'; $('decisionHeadline').textContent='開1張，勾「一＋二」'; $('decisionInstructions').innerHTML=`<div class="instructions"><div class="instruction-block"><h4>收料單怎麼勾</h4><strong>同一張勾「一＋二」</strong><span>收料單重量 ${actual??'待確認'} kg</span></div><div class="instruction-block scale-guide"><h4>磅單重量怎麼登打</h4><strong>回廠後依收料單重量 ${actual??'待確認'} kg 登打</strong><span>輸入總重、空重及扣重，使磅單淨重與收料單重量一致。</span></div></div>`;
   } else if(relation==='equal'){
     alert.classList.add('success'); $('decisionName').textContent='1張－勾12'; $('decisionHeadline').textContent='重量相等，開1張'; $('decisionInstructions').innerHTML=`<div class="instructions"><div class="instruction-block"><h4>收料單怎麼勾</h4><strong>同一張勾「一＋二」：${actual??'待輸入'} kg</strong></div><div class="instruction-block scale-guide"><h4>磅單重量怎麼登打</h4><strong>磅單淨重登打 ${actual??'待輸入'} kg</strong><span>輸入總重、空重及扣重，由系統確認淨重一致。</span></div></div>`;
-  } else { $('decisionName').textContent='資料不足'; $('decisionHeadline').textContent='請補齊重量'; }
+  } else { hideScaleFlow(); $('decisionName').textContent='資料不足'; $('decisionHeadline').textContent='請補齊重量'; return; }
+  offerScaleFlow();
 }
 function cleanOcrText(text){
   return text.normalize('NFKC').replace(/[|｜]/g,'I').replace(/\r/g,'').replace(/[ \t]+/g,' ').trim();
@@ -177,7 +180,9 @@ $('demoManifest').addEventListener('click',loadManifest); $('demoReceipt').addEv
 ['manifestCamera','manifestGallery'].forEach(id=>$(id).addEventListener('change',e=>fileSelected(e.target,'manifestFile','manifest')));
 ['receiptCamera','receiptGallery'].forEach(id=>$(id).addEventListener('change',e=>fileSelected(e.target,'receiptFile','receipt')));
 $('confirmManifest').addEventListener('click',()=>confirmGroup('manifest')); $('confirmReceipt').addEventListener('click',()=>confirmGroup('receipt'));
-document.querySelectorAll('input[name="weightRelation"]').forEach(input=>input.addEventListener('change',evaluate)); $('noManifest').addEventListener('change',evaluate); $('generateSlip').addEventListener('click',generateSlip); $('closeSlip').addEventListener('click',()=>$('weighSlip').classList.remove('visible'));
+document.querySelectorAll('input[name="weightRelation"]').forEach(input=>input.addEventListener('change',()=>{ hideScaleFlow(); evaluate(); })); $('noManifest').addEventListener('change',()=>{ hideScaleFlow(); evaluate(); }); $('generateSlip').addEventListener('click',generateSlip); $('closeSlip').addEventListener('click',()=>$('weighSlip').classList.remove('visible'));
+$('startScaleTest').addEventListener('click',()=>{ $('scalePanel').classList.remove('hidden'); $('scaleChoiceStatus').textContent='已選擇進行磅單模擬測試'; $('scalePanel').scrollIntoView({behavior:'smooth'}); });
+$('skipScaleTest').addEventListener('click',()=>{ $('scalePanel').classList.add('hidden'); $('scaleChoiceStatus').textContent='已選擇暫不進行磅單模擬'; });
 $('printSlip').addEventListener('click',()=>window.print());
 $('copyProduction').addEventListener('click',async()=>{ try{ await navigator.clipboard.writeText(productionText()); toast('已複製給生管'); }catch{ toast('瀏覽器未允許複製'); } });
 document.querySelectorAll('input').forEach(input=>{ if(!['file','checkbox'].includes(input.type)) input.addEventListener('input',()=>{ updateCalculations(); markGroupEdited(input.dataset.group); }); });
