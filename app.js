@@ -1,7 +1,7 @@
 const $ = (id) => document.getElementById(id);
 const OCR_WORKER_URL = 'https://weighing-ticket-ocr.yilida-material.workers.dev';
 const state = { manifestConfirmed:false, receiptConfirmed:false };
-const manifestIds = ['manifestNo','manifestDate','vehicleNo','manifestMaterial','declaredWeight','manifestNote'];
+const manifestIds = ['manifestNo','manifestDate','vehicleNo','manifestMaterial','declaredWeight','generatorWeighed','manifestNote'];
 const receiptIds = ['customerName','customerNo','receiptNo','receiptTransportDate','item1No','item1Name','item1Weight','item2No','item2Name','item2Weight'];
 
 function setValues(values){ Object.entries(values).forEach(([id,value])=>{ if($(id)) $(id).value=value; }); updateCalculations(); }
@@ -33,7 +33,7 @@ function markGroupEdited(group){
   $(group==='manifest'?'manifestDot':'receiptDot').classList.remove('done'); refreshScaleCheck(); evaluate();
 }
 function loadManifest(){
-  setValues({manifestNo:'M-DEMO-001',manifestDate:'2026-09-08',vehicleNo:'ABC-1234',manifestMaterial:'E-DEMO',declaredWeight:'0.007',manifestNote:''});
+  setValues({manifestNo:'M-DEMO-001',manifestDate:'2026-09-08',vehicleNo:'ABC-1234',manifestMaterial:'E-DEMO',declaredWeight:'0.007',generatorWeighed:'yes',manifestNote:''});
   $('manifestState').textContent='待人工確認'; $('manifestState').className='state waiting'; toast('已載入範例聯單資料');
 }
 function loadReceipt(){
@@ -54,6 +54,8 @@ function hideScaleFlow(){ $('scalePrompt').classList.add('hidden'); $('scalePane
 function offerScaleFlow(){ $('scalePrompt').classList.remove('hidden'); }
 function evaluate(){
   const noManifest=$('noManifest').checked;
+  const generatorWeighed=$('generatorWeighed').value;
+  $('weightRelationGroup').classList.toggle('hidden',noManifest||generatorWeighed==='no');
   const ready=state.receiptConfirmed&&(noManifest||state.manifestConfirmed);
   if(noManifest&&state.receiptConfirmed){
     ['compareNo','compareDate','compareWeight'].forEach(id=>{ $(id).textContent='— 不適用'; $(id).className=''; });
@@ -70,6 +72,10 @@ function evaluate(){
   $('resultDot').classList.add('done');
   if(noManifest){
     alert.classList.add('success'); $('decisionName').textContent='1張－勾1'; $('decisionHeadline').textContent='無聯單，開1張'; $('decisionInstructions').innerHTML=`<div class="instructions"><div class="instruction-block"><h4>收料單怎麼勾</h4><strong>第1張只勾「一」</strong><span>重量填實際收貨重量 ${actual??'待輸入'} kg</span></div><div class="instruction-block scale-guide"><h4>磅單重量怎麼登打</h4><strong>淨重以實際收貨重量 ${actual??'待輸入'} kg 為準</strong><span>輸入總重、空重及扣重，由系統自動計算淨重。</span></div></div>`;
+  } else if(!generatorWeighed){
+    hideScaleFlow(); $('decisionName').textContent='請確認事業端是否過磅'; $('decisionHeadline').textContent='請查看聯單上的過磅勾選'; $('decisionInstructions').innerHTML=''; return;
+  } else if(generatorWeighed==='no'){
+    alert.classList.add('success'); $('decisionName').textContent='1張－待確認12'; $('decisionHeadline').textContent='事業端未過磅，以我方實際過磅為準'; $('decisionInstructions').innerHTML=`<div class="instructions"><div class="instruction-block"><h4>收料單怎麼勾</h4><strong>同一張勾「一＋二」</strong><span>事業端未過磅，重量待我方實際過磅確認。</span></div><div class="instruction-block scale-guide"><h4>磅單重量怎麼登打</h4><strong>以我方實際過磅淨重為準</strong><span>輸入總重、空重及扣重，由系統計算我方實際淨重。</span></div></div>`;
   } else if(!relation){
     hideScaleFlow(); $('decisionName').textContent='請選擇重量狀況'; $('decisionHeadline').textContent='重量相等／不相等／目前無法確認'; $('decisionInstructions').innerHTML=''; return;
   } else if(relation==='different'||(declared!=null&&actual!=null&&declared!==actual)){
@@ -142,7 +148,7 @@ async function fileSelected(input,status,group){
     const weightedItems=(data.items||[]).filter(item=>item?.net_weight_kg!==null&&item?.net_weight_kg!==''&&Number.isFinite(Number(item.net_weight_kg)));
     const values=group==='manifest'?{
       manifestNo:data.manifest_no,manifestDate:data.date,vehicleNo:data.vehicle_no,manifestMaterial:data.material_name,
-      declaredWeight:Number.isFinite(Number(data.declared_weight_kg))?Number(data.declared_weight_kg)/1000:null,manifestNote:data.note
+      declaredWeight:Number.isFinite(Number(data.declared_weight_kg))?Number(data.declared_weight_kg)/1000:null,generatorWeighed:typeof data.generator_weighed==='boolean'?(data.generator_weighed?'yes':'no'):null,manifestNote:data.note
     }:{
       customerName:data.customer_name,customerNo:data.customer_no,receiptNo:data.receipt_no,receiptTransportDate:data.transport_date,
       item1No:weightedItems[0]?.material_no,item1Name:weightedItems[0]?.material_name,item1Weight:weightedItems[0]?.net_weight_kg,
@@ -187,6 +193,7 @@ $('printSlip').addEventListener('click',()=>window.print());
 $('copyProduction').addEventListener('click',async()=>{ try{ await navigator.clipboard.writeText(productionText()); toast('已複製給生管'); }catch{ toast('瀏覽器未允許複製'); } });
 document.querySelectorAll('input').forEach(input=>{ if(!['file','checkbox'].includes(input.type)) input.addEventListener('input',()=>{ updateCalculations(); markGroupEdited(input.dataset.group); }); });
 document.querySelectorAll('input[data-group][type="checkbox"]').forEach(input=>input.addEventListener('change',()=>markGroupEdited(input.dataset.group)));
+document.querySelectorAll('select[data-group]').forEach(input=>input.addEventListener('change',()=>{ updateCalculations(); markGroupEdited(input.dataset.group); }));
 if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
 if(document.modelContext?.registerTool){
   const lifecycle=new AbortController();

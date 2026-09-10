@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0b3d3a">
   <meta name="description" content="手機優先的聯單、收料單判定與地磅單預覽工具">
   <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="stylesheet" href="./styles.css?v=6">
+  <link rel="stylesheet" href="./styles.css?v=7">
   <title>司機收料單判定工具</title>
 </head>
 <body>
@@ -85,6 +85,7 @@
           <label>車號<input id="vehicleNo" data-group="manifest" required placeholder="例如 ABC-1234"></label>
           <label>聯單物料代碼<input id="manifestMaterial" data-group="manifest" required placeholder="例如 E-DEMO"></label>
           <label class="weight-field">聯單申報重量<span><input id="declaredWeight" data-group="manifest" type="number" min="0" step="0.001" required><b>噸</b></span><small id="declaredKgHint">換算：— kg</small></label>
+          <label>事業端是否過磅<select id="generatorWeighed" data-group="manifest" required><option value="">請人工確認</option><option value="yes">是，事業端已過磅</option><option value="no">否，事業端未過磅</option></select></label>
           <label>備註<input id="manifestNote" data-group="manifest" placeholder="選填"></label>
         </div>
         <button class="confirm-button" id="confirmManifest" type="button">確認聯單正確</button>
@@ -176,6 +177,6 @@
   </main>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script src="./app.js?v=14"></script>
+<script src="./app.js?v=15"></script>
 </body>
 </html>
