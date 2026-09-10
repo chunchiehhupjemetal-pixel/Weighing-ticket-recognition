@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0b3d3a">
+  <meta name="description" content="手機優先的聯單、收料單判定與地磅單預覽工具">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./styles.css?v=3">
+  <title>司機收料單判定工具</title>
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">現場收料作業</p>
+      <h1>收料單判定工具</h1>
+    </div>
+    <span class="demo-badge">正式測試版</span>
+  </header>
+
+  <main>
+    <section class="status-strip" aria-label="作業進度">
+      <div><span id="manifestDot">1</span><small>聯單</small></div>
+      <i></i>
+      <div><span id="receiptDot">2</span><small>收料單</small></div>
+      <i></i>
+      <div><span id="resultDot">3</span><small>判定</small></div>
+      <i></i>
+      <div><span id="scaleDot">4</span><small>磅單</small></div>
+    </section>
+
+    <section class="capture-grid">
+      <article class="capture-card manifest-card">
+        <div class="card-heading">
+          <div class="doc-icon" aria-hidden="true">聯</div>
+          <div><p>入口一</p><h2>拍攝聯單</h2></div>
+        </div>
+        <p class="muted">擷取聯單號、日期、車號、物料代碼與申報重量。</p>
+        <label class="camera-button">
+          <span>開啟相機／相簿</span>
+          <input id="manifestPhoto" type="file" accept="image/*" capture="environment">
+        </label>
+        <button class="secondary-button" id="demoManifest" type="button">載入範例聯單資料</button>
+        <p class="file-status" id="manifestFile">尚未選擇照片</p>
+      </article>
+
+      <article class="capture-card receipt-card">
+        <div class="card-heading">
+          <div class="doc-icon" aria-hidden="true">收</div>
+          <div><p>入口二</p><h2>拍攝收料單</h2></div>
+        </div>
+        <p class="muted">擷取客戶、收料單號、多筆物料與實收重量。</p>
+        <label class="camera-button">
+          <span>開啟相機／相簿</span>
+          <input id="receiptPhoto" type="file" accept="image/*" capture="environment">
+        </label>
+        <button class="secondary-button" id="demoReceipt" type="button">載入範例收料單資料</button>
+        <p class="file-status" id="receiptFile">尚未選擇照片</p>
+      </article>
+    </section>
+
+    <section class="panel" id="confirmPanel">
+      <div class="section-title">
+        <div><p class="eyebrow">人工確認</p><h2>辨識資料</h2></div>
+        <span class="required-note">紅框為必填</span>
+      </div>
+
+      <div class="form-section">
+        <div class="subhead"><h3>聯單資料</h3><span id="manifestState" class="state waiting">待載入</span></div>
+        <div class="form-grid">
+          <label>聯單編號<input id="manifestNo" data-group="manifest" required placeholder="請輸入聯單編號"></label>
+          <label>載運日期<input id="manifestDate" data-group="manifest" type="date" required></label>
+          <label>車號<input id="vehicleNo" data-group="manifest" required placeholder="例如 ABC-1234"></label>
+          <label>聯單物料代碼<input id="manifestMaterial" data-group="manifest" required placeholder="例如 E-DEMO"></label>
+          <label class="weight-field">聯單申報重量<span><input id="declaredWeight" data-group="manifest" type="number" min="0" step="0.001" required><b>噸</b></span><small id="declaredKgHint">換算：— kg</small></label>
+          <label>備註<input id="manifestNote" data-group="manifest" placeholder="選填"></label>
+        </div>
+        <button class="confirm-button" id="confirmManifest" type="button">確認聯單正確</button>
+      </div>
+
+      <div class="form-section receipt-form">
+        <div class="subhead"><h3>收料單資料</h3><span id="receiptState" class="state waiting">待載入</span></div>
+        <div class="form-grid">
+          <label>客戶名稱<input id="customerName" data-group="receipt" required placeholder="以收料單為準"></label>
+          <label>客戶編號<input id="customerNo" data-group="receipt" required></label>
+          <label>收料單號<input id="receiptNo" data-group="receipt" required></label>
+          <label>收料單聯單號<input id="receiptManifestNo" data-group="receipt" required></label>
+          <label>收料單載運日期<input id="receiptTransportDate" data-group="receipt" type="date" required></label>
+          <fieldset class="check-field"><legend>目前勾選</legend><label><input id="check1" data-group="receipt" type="checkbox"> 一</label><label><input id="check2" data-group="receipt" type="checkbox"> 二</label></fieldset>
+        </div>
+        <div class="items-table" aria-label="收料單物料品項">
+          <div class="items-head"><span>物料編號／名稱</span><span>淨重</span></div>
+          <div class="item-row"><div><input id="item1No" data-group="receipt" aria-label="品項一物料編號"><input id="item1Name" data-group="receipt" aria-label="品項一物料名稱"></div><label><input id="item1Weight" data-group="receipt" type="number" min="0" step="0.001" aria-label="品項一淨重"><b>kg</b></label></div>
+          <div class="item-row"><div><input id="item2No" data-group="receipt" aria-label="品項二物料編號"><input id="item2Name" data-group="receipt" aria-label="品項二物料名稱"></div><label><input id="item2Weight" data-group="receipt" type="number" min="0" step="0.001" aria-label="品項二淨重"><b>kg</b></label></div>
+        </div>
+        <div class="total-line"><span>實際收貨重量</span><strong id="receiptTotal">— kg</strong></div>
+        <button class="confirm-button" id="confirmReceipt" type="button">確認收料單正確</button>
+      </div>
+    </section>
+
+    <section class="panel comparison-panel" id="comparisonPanel">
+      <div class="section-title"><div><p class="eyebrow">交叉比對</p><h2>單據是否一致</h2></div></div>
+      <div class="compare-grid">
+        <div><span>聯單編號</span><strong id="compareNo">⚠ 無法辨識</strong></div>
+        <div><span>日期</span><strong id="compareDate">⚠ 無法辨識</strong></div>
+        <div><span>重量</span><strong id="compareWeight">⚠ 無法辨識</strong></div>
+        <div><span>客戶</span><strong>人工確認</strong></div>
+      </div>
+    </section>
+
+    <section class="panel decision-panel" id="decisionPanel">
+      <div class="section-title"><div><p class="eyebrow">固定規則判定</p><h2>收料單應如何開立</h2></div></div>
+      <label class="unknown-switch no-manifest"><input id="noManifest" type="checkbox"><span><b>本次作業沒有聯單</b><small>必須由司機明確選擇</small></span></label>
+      <label class="unknown-switch"><input id="weightUnknown" type="checkbox"><span><b>現場無法確認是否等重</b><small>例如客戶端無過大磅；照片模糊不適用</small></span></label>
+      <div class="decision-alert" id="decisionAlert">
+        <p id="decisionName">請先確認兩張單據</p>
+        <h3 id="decisionHeadline">尚未完成判定</h3>
+        <div id="decisionInstructions"></div>
+      </div>
+      <div class="fixed-rule"><b>最高優先規則</b><span>實際收貨重量 ≠ 聯單申報重量 → 一律分2張收料單</span></div>
+    </section>
+
+    <section class="panel scale-panel" id="scalePanel">
+      <div class="section-title"><div><p class="eyebrow">地磅單</p><h2>輸入過磅重量</h2></div><span class="unit-pill">單位 KG</span></div>
+      <div class="scale-inputs">
+        <label>總重<small>地磅第一次秤重</small><input id="grossWeight" type="number" min="0" step="0.001" inputmode="decimal" required placeholder="請輸入總重"></label>
+        <label>空重<small>地磅第二次秤重</small><input id="tareWeight" type="number" min="0" step="0.001" inputmode="decimal" required placeholder="請輸入空重"></label>
+        <label>扣重<small>過磅人員輸入</small><input id="deductionWeight" type="number" min="0" step="0.001" inputmode="decimal" required placeholder="沒有扣重請輸入 0"></label>
+      </div>
+      <div class="net-weight"><span>磅單淨重</span><strong id="scaleNet">11.000</strong><b>kg</b></div>
+      <p class="formula">總重 − 空重 − 扣重 = 淨重</p>
+      <p class="scale-check" id="scaleCheck">請先完成收料單確認</p>
+      <button class="primary-button" id="generateSlip" type="button">產生地磅單預覽</button>
+    </section>
+
+    <section class="weigh-slip" id="weighSlip" aria-label="進廠磅單預覽">
+      <div class="slip-top"><div><p class="eyebrow">PDF 預覽</p><h2>進廠磅單</h2></div><button id="closeSlip" class="icon-button" type="button" aria-label="關閉預覽">×</button></div>
+      <div class="slip-meta">
+        <p>過磅單號：<b id="slipNumber">G-DEMO-001</b></p><p>日期：<b id="slipDate">2026.09.08</b></p>
+        <p>客戶名稱：<b id="slipCustomer">—</b></p><p>時間：<b id="slipTime">16:04:09</b></p>
+        <p>聯單編號：<b id="slipManifest">—</b></p><p>車號：<b id="slipVehicle">—</b></p>
+      </div>
+      <div class="slip-table">
+        <div><span>收料單號</span><b id="slipReceipt">—</b><span>總重</span><strong id="slipGross">—</strong></div>
+        <div><span>批號</span><b>待輸入</b><span>空重</span><strong id="slipTare">—</strong></div>
+        <div><span>物料編號</span><b id="slipMaterialNo">DEMO-MAT</b><span>扣重</span><strong id="slipDeduction">—</strong></div>
+        <div><span>物料名稱</span><b id="slipMaterialName">範例物料</b><span>淨重</span><strong id="slipNet">—</strong></div>
+        <div><span>庫位</span><b>待對照表</b><span>備註</span><strong></strong></div>
+      </div>
+      <div class="signature-line"><span>生管人員：</span><span>會磅員：</span><span>過磅員：</span></div>
+      <div class="slip-actions"><button id="printSlip" class="secondary-button" type="button">列印／存成 PDF</button><button id="copyProduction" class="primary-button" type="button">複製給生管</button></div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="./app.js?v=7"></script>
+</body>
+</html>
