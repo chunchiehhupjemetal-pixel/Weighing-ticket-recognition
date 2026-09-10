@@ -75,7 +75,68 @@ function evaluate(){
     alert.classList.add('success'); $('decisionName').textContent='1張－勾12'; $('decisionHeadline').textContent='重量一致，開1張'; $('decisionInstructions').innerHTML=`<div class="instructions"><div class="instruction-block"><h4>收料單怎麼勾</h4><strong>同一張勾「一＋二」：${actual} kg</strong></div><div class="instruction-block scale-guide"><h4>磅單重量怎麼登打</h4><strong>磅單淨重登打 ${actual} kg</strong><span>輸入總重、空重及扣重，由系統確認淨重一致。</span></div></div>`;
   } else { $('decisionName').textContent='資料不足'; $('decisionHeadline').textContent='請補齊重量'; }
 }
-function fileSelected(input,status){ const file=input.files?.[0]; $(status).textContent=file?`已選擇：${file.name}`:'尚未選擇照片'; if(file) toast('測試版已收到照片，請用範例資料模擬辨識'); }
+function cleanOcrText(text){
+  return text.normalize('NFKC').replace(/[|｜]/g,'I').replace(/\r/g,'').replace(/[ \t]+/g,' ').trim();
+}
+function afterLabel(lines,labels){
+  const label=labels.map(v=>v.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|');
+  for(const line of lines){
+    const match=line.match(new RegExp(`(?:${label})\\s*[:：]?\\s*(.+)$`,'i'));
+    if(match?.[1]) return match[1].split(/(?:客戶編號|聯單編號|聯單號|日期|車號|備註)\s*[:：]/)[0].trim();
+  }
+  return null;
+}
+function firstCode(value){ return value?.match(/[A-Z0-9][A-Z0-9_-]{2,}/i)?.[0]||null; }
+function firstDate(value){
+  const m=value?.match(/(20\d{2})[\/.\-年]\s*(\d{1,2})[\/.\-月]\s*(\d{1,2})日?/);
+  return m?`${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`:null;
+}
+function applyRecognized(values,group){
+  let count=0;
+  Object.entries(values).forEach(([id,value])=>{ if(value!==null&&value!==undefined&&String(value).trim()&&$(id)){ $(id).value=String(value).trim(); count++; } });
+  state[`${group}Confirmed`]=false;
+  $(`${group}State`).textContent=count?`已辨識 ${count} 欄，請確認`:'無法可靠辨識，請人工輸入';
+  $(`${group}State`).className='state waiting'; updateCalculations();
+  return count;
+}
+function parseManifest(text){
+  const lines=text.split('\n').map(v=>v.trim()).filter(Boolean), all=lines.join('\n');
+  const no=afterLabel(lines,['聯單編號','聯單號','聯單號碼']);
+  const date=afterLabel(lines,['載運日期','日期']);
+  const vehicle=afterLabel(lines,['車號','車牌']);
+  const material=afterLabel(lines,['物料編號','物料代碼','廢棄物代碼']);
+  const weightLine=lines.find(v=>/(申報重量|重量)/.test(v));
+  const weight=weightLine?.match(/(\d+(?:[,.]\d+)?)\s*(?:噸|公噸|TON|T\b)/i)||weightLine?.match(/(\d+(?:[,.]\d+)?)/);
+  return {manifestNo:firstCode(no),manifestDate:firstDate(date||all),vehicleNo:firstCode(vehicle),manifestMaterial:firstCode(material),declaredWeight:weight?weight[1].replace(',',''):null};
+}
+function parseReceipt(text){
+  const lines=text.split('\n').map(v=>v.trim()).filter(Boolean), all=lines.join('\n');
+  const customer=afterLabel(lines,['客戶名稱','客戶']);
+  const customerNo=afterLabel(lines,['客戶編號','客戶代號']);
+  const receiptNo=afterLabel(lines,['收料單號','收料單編號']);
+  const manifestNo=afterLabel(lines,['聯單編號','聯單號']);
+  const date=afterLabel(lines,['載運日期','單據日期','日期']);
+  const items=[];
+  for(const line of lines){
+    const m=line.match(/(?:^|\s)([A-Z0-9]+(?:-[A-Z0-9]+){1,})\s+(.+?)\s+(\d+(?:[,.]\d+)?)\s*(?:kg|公斤)?\s*$/i);
+    if(m&&!/(收料單|聯單)/.test(line)) items.push({no:m[1],name:m[2].trim(),weight:m[3].replace(',','')});
+  }
+  return {customerName:customer,customerNo:firstCode(customerNo),receiptNo:firstCode(receiptNo),receiptManifestNo:firstCode(manifestNo),receiptTransportDate:firstDate(date||all),item1No:items[0]?.no,item1Name:items[0]?.name,item1Weight:items[0]?.weight,item2No:items[1]?.no,item2Name:items[1]?.name,item2Weight:items[1]?.weight};
+}
+async function fileSelected(input,status,group){
+  const file=input.files?.[0];
+  if(!file){ $(status).textContent='尚未選擇照片'; return; }
+  $(status).textContent='準備辨識照片…';
+  if(!window.Tesseract){ $(status).textContent='辨識元件載入失敗，請檢查網路後重試'; toast('OCR 元件載入失敗'); return; }
+  try{
+    const result=await Tesseract.recognize(file,'chi_tra+eng',{logger:m=>{ if(m.status==='recognizing text') $(status).textContent=`辨識中 ${Math.round((m.progress||0)*100)}%`; }});
+    const text=cleanOcrText(result.data.text||'');
+    const count=applyRecognized(group==='manifest'?parseManifest(text):parseReceipt(text),group);
+    $(status).textContent=count?`辨識完成：已填入 ${count} 欄`:'無法可靠辨識，請人工輸入';
+    toast(count?'辨識完成，請逐欄確認':'未辨識到可靠欄位');
+  }catch(error){ console.error(error); $(status).textContent='辨識失敗，請重拍或人工輸入'; toast('照片辨識失敗'); }
+  finally{ input.value=''; }
+}
 function generateSlip(){
   const noManifest=$('noManifest').checked;
   if(!state.receiptConfirmed||(!noManifest&&!state.manifestConfirmed)){ toast(noManifest?'請先確認收料單':'請先確認聯單與收料單'); $('confirmPanel').scrollIntoView({behavior:'smooth'}); return; }
@@ -95,8 +156,8 @@ function productionText(){
 }
 
 $('demoManifest').addEventListener('click',loadManifest); $('demoReceipt').addEventListener('click',loadReceipt);
-['manifestCamera','manifestGallery'].forEach(id=>$(id).addEventListener('change',e=>fileSelected(e.target,'manifestFile')));
-['receiptCamera','receiptGallery'].forEach(id=>$(id).addEventListener('change',e=>fileSelected(e.target,'receiptFile')));
+['manifestCamera','manifestGallery'].forEach(id=>$(id).addEventListener('change',e=>fileSelected(e.target,'manifestFile','manifest')));
+['receiptCamera','receiptGallery'].forEach(id=>$(id).addEventListener('change',e=>fileSelected(e.target,'receiptFile','receipt')));
 $('confirmManifest').addEventListener('click',()=>confirmGroup('manifest')); $('confirmReceipt').addEventListener('click',()=>confirmGroup('receipt'));
 $('weightUnknown').addEventListener('change',evaluate); $('noManifest').addEventListener('change',evaluate); $('generateSlip').addEventListener('click',generateSlip); $('closeSlip').addEventListener('click',()=>$('weighSlip').classList.remove('visible'));
 $('printSlip').addEventListener('click',()=>window.print());
